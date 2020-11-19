@@ -72,7 +72,6 @@ def parser_for(rules: dict, default_state: dict = {}) -> \
             rule = None
             capture = None
             quality = -1
-            state['previous_capture'] = None
 
             i = 0
             current_rule_type = rule_list[0]
