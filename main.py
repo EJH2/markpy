@@ -15,17 +15,20 @@ def preprocess(source: str) -> str:
     return TAB_R.sub('\n', FORMFEED_R.sub('', CR_NEWLINE_R.sub('    ', source)))
 
 
-def populate_initial_state(state: dict = {}, default_state: dict = None) -> dict:
+def populate_initial_state(given_state: dict = None, default_state: dict = None) -> dict:
+    state = given_state or {}
     if default_state:
         for key in default_state:
             state[key] = default_state[key]
     return state
 
 
-def parser_for(rules: dict, default_state: dict = {}) -> \
-        Callable[[str, Optional[dict]], Callable[[str, Optional[dict]], list]]:
+def parser_for(rules: dict, default_state: dict = None) -> \
+        Callable[[str, Optional[dict]], List_[Union[list, str]]]:
 
-    def filter_rules(rule_type):
+    default_state = default_state or {}
+
+    def _filter_rules(rule_type):
         rule = rules.get(rule_type)
         if not rule or not hasattr(rule, 'match'):
             return False
@@ -34,7 +37,7 @@ def parser_for(rules: dict, default_state: dict = {}) -> \
             print(f'Invalid order for rule `{rule_type}`: {order}')
         return True
 
-    rule_list = list(filter(filter_rules, rules.keys()))
+    rule_list = list(filter(_filter_rules, rules.keys()))
 
     def sort_rules(rule_type_a, rule_type_b):
         rule_a = rules[rule_type_a]
@@ -59,9 +62,9 @@ def parser_for(rules: dict, default_state: dict = {}) -> \
 
     rule_list.sort(key=cmp_to_key(sort_rules))
 
-    latest_state = None
+    latest_state = {}
 
-    def nested_parse(source: str, state: dict = None):
+    def nested_parse(source: str, state: dict):
         result = []
         nonlocal latest_state
         global current_order
@@ -133,6 +136,7 @@ def parser_for(rules: dict, default_state: dict = {}) -> \
         return result
 
     def outer_parse(source: str, state: dict = None):
+        state = state or {}
         nonlocal latest_state
         latest_state = populate_initial_state(state, default_state)
         if not latest_state.get('inline') and not latest_state.get('disable_auto_block_newlines'):
@@ -177,7 +181,8 @@ def any_scope_regex(regex: str) -> Callable[[str, dict], Iterable]:
     return match
 
 
-def react_element(_type: str, key: Union[str, int] = None, props: dict = {}) -> dict:
+def react_element(_type: str, key: Union[str, int] = None, props: dict = None) -> dict:
+    props = props or {}
     element = {
         'type': _type,
         'key': key,
@@ -1233,7 +1238,8 @@ def rules_output(rules, property):
 
 def react_for(output_func):
 
-    def nested_output(ast, state = {}):
+    def nested_output(ast: Union[list, str], state: dict = None):
+        state = state or {}
         if isinstance(ast, list):
             old_key = state['key']
             result = []
@@ -1259,7 +1265,8 @@ def react_for(output_func):
 
 def html_for(output_func):
 
-    def nested_output(ast, state = {}):
+    def nested_output(ast, state=None):
+        state = state or {}
         if isinstance(ast, list):
             return ''.join([nested_output(node, state) for node in ast])
         else:
@@ -1268,11 +1275,8 @@ def html_for(output_func):
     return nested_output
 
 
-def output_for(rules, property, default_state = {}):
-    if not property:
-        raise Exception('simple-markdown: outputFor: `property` must be defined. '
-                        'if you just upgraded, you probably need to replace `outputFor` with `reactFor`')
-
+def output_for(rules: dict, property_: str, default_state: dict = None):
+    default_state = default_state or {}
     latest_state = None
     array_rule = rules.get('Array') or default_rules['Array']
 
@@ -1292,9 +1296,10 @@ def output_for(rules, property, default_state = {}):
         if isinstance(ast, list):
             return array_rule_output(ast, nested_output, state)
         else:
-            return getattr(rules[ast['type']], property)(ast, nested_output, state)
+            return getattr(rules[ast['type']], property_)(ast, nested_output, state)
 
-    def outer_output(ast, state):
+    def outer_output(ast, state=None):
+        state = state or {}
         nonlocal latest_state
         latest_state = populate_initial_state(state, default_state)
         return nested_output(ast, latest_state)
@@ -1305,18 +1310,21 @@ def output_for(rules, property, default_state = {}):
 default_raw_parse = parser_for(default_rules)
 
 
-def default_block_parse(source, state = {}):
+def default_block_parse(source: str, state: dict = None):
+    state = state or {}
     state['inline'] = False
     return default_raw_parse(source, state)
 
 
-def default_inline_parse(source, state = {}):
+def default_inline_parse(source: str, state: dict = None):
+    state = state or {}
     state['inline'] = True
     return default_raw_parse(source, state)
 
 
-def default_implicit_parse(source, state = {}):
-    is_block = BLOCK_END_R.match(source)
+def default_implicit_parse(source: str, state: dict = None):
+    state = state or {}
+    is_block = BLOCK_END_R.search(source)
     state['inline'] = not is_block
     return default_raw_parse(source, state)
 
@@ -1325,11 +1333,13 @@ default_react_output = output_for(default_rules, 'react')
 default_html_output = output_for(default_rules, 'html')
 
 
-def markdown_to_react(source, state = {}):
+def markdown_to_react(source: str, state: dict = None):
+    state = state or {}
     return default_react_output(default_block_parse(source, state), state)
 
 
-def markdown_to_html(source, state = {}):
+def markdown_to_html(source: str, state: dict = None):
+    state = state or {}
     return default_html_output(default_block_parse(source, state), state)
 
 
