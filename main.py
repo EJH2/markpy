@@ -8,11 +8,11 @@ import numbers
 
 CR_NEWLINE_R = re.compile(r'\r\n?')
 TAB_R = re.compile(r'\t')
-FORMFEED_R = re.compile(r'\f')
+FORM_FEED_R = re.compile(r'\f')
 
 
 def preprocess(source: str) -> str:
-    return TAB_R.sub('\n', FORMFEED_R.sub('', CR_NEWLINE_R.sub('    ', source)))
+    return TAB_R.sub('\n', FORM_FEED_R.sub('', CR_NEWLINE_R.sub('    ', source)))
 
 
 def populate_initial_state(given_state: dict = None, default_state: dict = None) -> dict:
@@ -39,7 +39,7 @@ def parser_for(rules: dict, default_state: dict = None) -> \
 
     rule_list = list(filter(_filter_rules, rules.keys()))
 
-    def sort_rules(rule_type_a, rule_type_b):
+    def _sort_rules(rule_type_a, rule_type_b):
         rule_a = rules[rule_type_a]
         rule_b = rules[rule_type_b]
         order_a = rule_a.order
@@ -60,7 +60,7 @@ def parser_for(rules: dict, default_state: dict = None) -> \
         else:
             return 0
 
-    rule_list.sort(key=cmp_to_key(sort_rules))
+    rule_list.sort(key=cmp_to_key(_sort_rules))
 
     latest_state = {}
 
@@ -213,11 +213,8 @@ def sanitize_url(url: str = None) -> Union[str, None]:
     if not url:
         return None
 
-    try:
-        prot = re.sub(r'[^A-Za-z0-9/:]', '', unquote(url)).lower()
-        if any([prot.startswith('javascript:'), prot.startswith('vbscript:'), prot.startswith('data:')]):
-            return None
-    except:
+    subbed = re.sub(r'[^A-Za-z0-9/:]', '', unquote(url)).lower()
+    if any([subbed.startswith('javascript:'), subbed.startswith('vbscript:'), subbed.startswith('data:')]):
         return None
     return url
 
@@ -293,27 +290,27 @@ LIST_R = re.compile(
 LIST_LOOKBEHIND_R = re.compile(r'(?:^|\n)( *)$')
 
 
-def TABLES():
-    TABLE_ROW_SEPARATOR_TRIM = re.compile(r'^ *\| *| *\| *$')
-    TABLE_CELL_END_TRIM = re.compile(r' *$')
-    TABLE_RIGHT_ALIGN = re.compile('^ *-+: *$')
-    TABLE_CENTER_ALIGN = re.compile('^ *:-+: *$')
-    TABLE_LEFT_ALIGN = re.compile('^ *:-+ *$')
+def do_tables() -> dict:
+    table_row_separator_trim = re.compile(r'^ *\| *| *\| *$')
+    table_cell_end_trim = re.compile(r' *$')
+    table_right_align = re.compile(r'^ *-+: *$')
+    table_center_align = re.compile(r'^ *:-+: *$')
+    table_left_align = re.compile(r'^ *:-+ *$')
 
     def parse_table_align_capture(align_capture):
-        if TABLE_RIGHT_ALIGN.match(align_capture):
-            return "right"
-        elif TABLE_CENTER_ALIGN.match(align_capture):
-            return "center"
-        elif TABLE_LEFT_ALIGN.match(align_capture):
-            return "left"
+        if table_right_align.search(align_capture):
+            return 'right'
+        elif table_center_align.search(align_capture):
+            return 'center'
+        elif table_left_align.search(align_capture):
+            return 'left'
         else:
             return None
 
     def parse_table_align(source, parse, state, trim_end_separators):
         if trim_end_separators:
-            source = TABLE_ROW_SEPARATOR_TRIM.sub("", source)
-        align_text = source.strip().split("|")
+            source = table_row_separator_trim.sub('', source)
+        align_text = source.strip().split('|')
         return list(map(parse_table_align_capture, align_text))
 
     def parse_table_row(source, parse, state, trim_end_separators):
@@ -331,7 +328,7 @@ def TABLES():
                 if node['type'] == 'text' and (
                         table_row[index + 1]['type'] == 'table_separator'
                 ) if len(table_row) > index + 1 else None:
-                    node['content'] = TABLE_CELL_END_TRIM.sub("", node['content'], count=1)
+                    node['content'] = table_cell_end_trim.sub('', node['content'], count=1)
                 cells[len(cells) - 1].append(node)
 
         return cells
