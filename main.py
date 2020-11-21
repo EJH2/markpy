@@ -392,22 +392,11 @@ class Rule:
     def __init__(self, order):
         self.order = order
 
-    def match(self, *args, **kwargs):
-        pass
-
-    def parse(self, capture, parse, state):
-        pass
-
-    def react(self, node, output, state):
-        pass
-
-    def html(self, node, output, state):
-        pass
-
 
 class Array(Rule):
 
-    def react(self, arr, output, state):
+    @staticmethod
+    def react(arr, output, state):
         old_key = state['key']
         result = []
 
@@ -429,7 +418,8 @@ class Array(Rule):
         state['key'] = old_key
         return result
 
-    def html(self, arr, output, state):
+    @staticmethod
+    def html(arr, output, state):
         result = ''
 
         i = 0
@@ -449,16 +439,19 @@ class Array(Rule):
 
 class Heading(Rule):
 
-    def match(self, *args, **kwargs):
+    @staticmethod
+    def match(*args, **kwargs):
         return block_regex(r'^ *(#{1,6})([^\n]+?)#* *(?:\n *)+\n')(*args, **kwargs)
 
-    def parse(self, capture, parse, state):
+    @staticmethod
+    def parse(capture, parse, state):
         return {
             'level': len(capture[1]),
             'content': parse_inline(parse, capture[2].strip(), state)
         }
 
-    def react(self, node, output, state):
+    @staticmethod
+    def react(node, output, state):
         return react_element(
             'h' + node['level'],
             state['key'],
@@ -467,25 +460,30 @@ class Heading(Rule):
             }
         )
 
-    def html(self, node, output, state):
+    @staticmethod
+    def html(node, output, state):
         return html_tag('h' + str(node['level']), output(node['content'], state))
 
 
 class NpTable(Rule):
 
-    def match(self, *args, **kwargs):
-        return block_regex(TABLES()['NPTABLE_REGEX'])(*args, **kwargs)
+    @staticmethod
+    def match(*args, **kwargs):
+        return block_regex(do_tables()['NPTABLE_REGEX'])(*args, **kwargs)
 
-    def parse(self, capture, parse, state):
-        return TABLES()['parse_np_table'](capture, parse, state)
+    @staticmethod
+    def parse(capture, parse, state):
+        return do_tables()['parse_np_table'](capture, parse, state)
 
 
 class LHeading(Rule):
 
-    def match(self, *args, **kwargs):
+    @staticmethod
+    def match(*args, **kwargs):
         return block_regex(r'^([^\n]+)\n *(=|-){3,} *(?:\n *)+\n')(*args, **kwargs)
 
-    def parse(self, capture, parse, state):
+    @staticmethod
+    def parse(capture, parse, state):
         return {
             'type': 'heading',
             'level': 1 if capture[2] == '=' else 2,
@@ -495,36 +493,43 @@ class LHeading(Rule):
 
 class HR(Rule):
 
-    def match(self, *args, **kwargs):
+    @staticmethod
+    def match(*args, **kwargs):
         return block_regex(r'^( *[-*_]){3,} *(?:\n *)+\n')(*args, **kwargs)
 
-    def parse(self, *args, **kwargs):
+    @staticmethod
+    def parse(*args, **kwargs):
         return ignore_capture()
 
-    def react(self, node, output, state):
+    @staticmethod
+    def react(node, output, state):
         return react_element(
             'hr',
             state['key'],
             EMPTY_PROPS
         )
 
-    def html(self, node, output, state):
+    @staticmethod
+    def html(*args, **kwargs):
         return '<hr>'
 
 
 class CodeBlock(Rule):
 
-    def match(self, *args, **kwargs):
+    @staticmethod
+    def match(*args, **kwargs):
         return block_regex(r'^(?:    [^\n]+\n*)+(?:\n *)+\n')(*args, **kwargs)
 
-    def parse(self, capture, parse, state):
-        content = re.sub(r'\n+$', '', re.sub(r'^    ', '', capture[0]))
+    @staticmethod
+    def parse(capture, parse, state):
+        content = re.sub(r'\n+$', '', re.sub(r'^ {4}', '', capture[0], flags=re.MULTILINE), count=1)
         return {
             'lang': None,
             'content': content
         }
 
-    def react(self, node, output, state):
+    @staticmethod
+    def react(node, output, state):
         class_name = f'markdown-code-{node["lang"]}' if node['lang'] else None
 
         return react_element(
@@ -542,7 +547,8 @@ class CodeBlock(Rule):
             }
         )
 
-    def html(self, node, output, state):
+    @staticmethod
+    def html(node, output, state):
         class_name = f'markdown-code-{node["lang"]}' if node['lang'] else None
 
         code_block = html_tag('code', sanitize_text(node['content']), {
@@ -553,12 +559,14 @@ class CodeBlock(Rule):
 
 class Fence(Rule):
 
-    def match(self, *args, **kwargs):
+    @staticmethod
+    def match(*args, **kwargs):
         return block_regex(r'^ *(`{3,}|~{3,}) *(?:(\S+) *)?\n([\s\S]+?)\n?\1 *(?:\n *)+\n')(*args, **kwargs)
 
-    def parse(self, capture, parse, state):
+    @staticmethod
+    def parse(capture, parse, state):
         return {
-            'type': 'codeBlock',
+            'type': 'code_block',
             'lang': capture[2] or None,
             'content': capture[3]
         }
@@ -566,17 +574,20 @@ class Fence(Rule):
 
 class BlockQuote(Rule):
 
-    def match(self, *args, **kwargs):
+    @staticmethod
+    def match(*args, **kwargs):
         return block_regex(r'^( *>[^\n]+(\n[^\n]+)*\n*)+\n{2,}')(*args, **kwargs)
 
-    def parse(self, capture, parse, state):
-        content = re.sub(r'^ *> ?', '', capture[0])
+    @staticmethod
+    def parse(capture, parse, state):
+        content = re.sub(r'^ *> ?', '', capture[0], flags=re.MULTILINE)
 
         return {
             'content': parse(content, state)
         }
 
-    def react(self, node, output, state):
+    @staticmethod
+    def react(node, output, state):
         return react_element(
             'blockquote',
             state['key'],
@@ -585,13 +596,15 @@ class BlockQuote(Rule):
             }
         )
 
-    def html(self, node, output, state):
+    @staticmethod
+    def html(node, output, state):
         return html_tag('blockquote', output(node['content'], state))
 
 
 class List(Rule):
 
-    def match(self, source, state, *args, **kwargs):
+    @staticmethod
+    def match(source, state, *args, **kwargs):
         previous_capture_string = '' if state.get('previous_capture') is None else state['previous_capture'][0]
         is_start_of_line_capture = LIST_LOOKBEHIND_R.search(previous_capture_string)
         is_list_block = state.get('_list') or not state.get('inline')
@@ -603,7 +616,8 @@ class List(Rule):
         else:
             return None
 
-    def parse(self, capture, parse, state):
+    @staticmethod
+    def parse(capture, parse, state):
         bullet = capture[2]
         ordered = len(bullet) > 1
         start = int(re.sub(r'[^\d]+?', '', bullet)) if ordered else None
@@ -650,7 +664,8 @@ class List(Rule):
             'items': item_content
         }
 
-    def react(self, node, output, state):
+    @staticmethod
+    def react(node, output, state):
         list_wrapper = 'ol' if node['ordered'] else 'ul'
 
         return react_element(
@@ -668,7 +683,8 @@ class List(Rule):
             }
         )
 
-    def html(self, node, output, state):
+    @staticmethod
+    def html(node, output, state):
         list_items = ''.join([html_tag('li', output(item, state)) for item in node['items']])
 
         list_tag = 'ol' if node['ordered'] else 'ul'
@@ -680,11 +696,12 @@ class List(Rule):
 
 class Def(Rule):
 
-    def match(self, *args, **kwargs):
-        m = block_regex(r'^ *\[([^\]]+)\]: *<?([^\s>]*)>?(?: +["(]([^\n]+)[")])? *\n(?: *\n)*')(*args, **kwargs)
-        return m
+    @staticmethod
+    def match(*args, **kwargs):
+        return block_regex(r'^ *\[([^\]]+)\]: *<?([^\s>]*)>?(?: +["(]([^\n]+)[")])? *\n(?: *\n)*')(*args, **kwargs)
 
-    def parse(self, capture, parse, state):
+    @staticmethod
+    def parse(capture, parse, state):
         _def = re.sub(r'\s+', ' ', capture[1]).lower()
         target = capture[2]
         title = capture[3]
@@ -706,22 +723,27 @@ class Def(Rule):
             'title': title
         }
 
-    def react(self, *args, **kwargs):
+    @staticmethod
+    def react(*args, **kwargs):
         return
 
-    def html(self, *args, **kwargs):
+    @staticmethod
+    def html(*args, **kwargs):
         return ''
 
 
 class Table(Rule):
 
-    def match(self, *args, **kwargs):
-        return block_regex(TABLES()['TABLE_REGEX'])(*args, **kwargs)
+    @staticmethod
+    def match(*args, **kwargs):
+        return block_regex(do_tables()['TABLE_REGEX'])(*args, **kwargs)
 
-    def parse(self, capture, parse, state):
-        return TABLES()['parse_table'](capture, parse, state)
+    @staticmethod
+    def parse(capture, parse, state):
+        return do_tables()['parse_table'](capture, parse, state)
 
-    def react(self, node, output, state):
+    @staticmethod
+    def react(node, output, state):
 
         def get_style(column_index):
             return {} if not node['align'][column_index] else {
@@ -779,7 +801,8 @@ class Table(Rule):
             }
         )
 
-    def html(self, node, output, state):
+    @staticmethod
+    def html(node, output, state):
 
         def get_style(column_index):
             return '' if not node['align'][column_index] else 'text-align:' + node['align'][column_index] + ';'
@@ -817,28 +840,35 @@ class Table(Rule):
 
 class NewLine(Rule):
 
-    def match(self, *args, **kwargs):
+    @staticmethod
+    def match(*args, **kwargs):
         return block_regex(r'^(?:\n *)*\n')(*args, **kwargs)
 
-    def parse(self, *args, **kwargs):
+    @staticmethod
+    def parse(*args, **kwargs):
         return ignore_capture()
 
-    def react(self, node, output, state):
+    @staticmethod
+    def react(*args, **kwargs):
         return '\n'
 
-    def html(self, node, output, state):
+    @staticmethod
+    def html(*args, **kwargs):
         return '\n'
 
 
 class Paragraph(Rule):
 
-    def match(self, *args, **kwargs):
+    @staticmethod
+    def match(*args, **kwargs):
         return block_regex(r'^((?:[^\n]|\n(?! *\n))+)(?:\n *)+\n')(*args, **kwargs)
 
-    def parse(self, capture, parse, state):
+    @staticmethod
+    def parse(capture, parse, state):
         return parse_capture_inline(capture, parse, state)
 
-    def react(self, node, output, state):
+    @staticmethod
+    def react(node, output, state):
         return react_element(
             'div',
             state['key'],
@@ -848,7 +878,8 @@ class Paragraph(Rule):
             }
         )
 
-    def html(self, node, output, state):
+    @staticmethod
+    def html(node, output, state):
         attributes = {
             'class': 'paragraph'
         }
@@ -857,10 +888,12 @@ class Paragraph(Rule):
 
 class Escape(Rule):
 
-    def match(self, *args, **kwargs):
+    @staticmethod
+    def match(*args, **kwargs):
         return inline_regex(r'^\\([^0-9A-Za-z\s])')(*args, **kwargs)
 
-    def parse(self, capture, parse, state):
+    @staticmethod
+    def parse(capture, parse, state):
         return {
             'type': 'text',
             'content': capture[1]
@@ -869,30 +902,36 @@ class Escape(Rule):
 
 class TableSeparator(Rule):
 
-    def match(self, source, state, *args, **kwargs):
+    @staticmethod
+    def match(source, state, *args, **kwargs):
         if not state.get('in_table'):
             return
 
         return re.search(r'^ *\| *', source)
 
-    def parse(self, *args, **kwargs):
+    @staticmethod
+    def parse(*args, **kwargs):
         return {
             'type': 'table_separator'
         }
 
-    def react(self, *args, **kwargs):
+    @staticmethod
+    def react(*args, **kwargs):
         return ' | '
 
-    def html(self, *args, **kwargs):
+    @staticmethod
+    def html(*args, **kwargs):
         return ' &vert; '
 
 
 class AutoLink(Rule):
 
-    def match(self, *args, **kwargs):
+    @staticmethod
+    def match(*args, **kwargs):
         return inline_regex(r'^<([^: >]+:\/[^ >]+)>')(*args, **kwargs)
 
-    def parse(self, capture, parse, state):
+    @staticmethod
+    def parse(capture, parse, state):
         return {
             'type': 'link',
             'content': [{
@@ -905,10 +944,12 @@ class AutoLink(Rule):
 
 class MailTo(Rule):
 
-    def match(self, *args, **kwargs):
+    @staticmethod
+    def match(*args, **kwargs):
         return inline_regex(r'^<([^ >]+@[^ >]+)>')(*args, **kwargs)
 
-    def parse(self, capture, parse, state):
+    @staticmethod
+    def parse(capture, parse, state):
         address = capture[1]
         target = capture[1]
 
@@ -927,10 +968,12 @@ class MailTo(Rule):
 
 class URL(Rule):
 
-    def match(self, *args, **kwargs):
+    @staticmethod
+    def match(*args, **kwargs):
         return inline_regex(r'^(https?:\/\/[^\s<]+[^<.,:;"\')\]\s])')(*args, **kwargs)
 
-    def parse(self, capture, parse, state):
+    @staticmethod
+    def parse(capture, parse, state):
         return {
             'type': 'link',
             'content': [{
@@ -944,10 +987,12 @@ class URL(Rule):
 
 class Link(Rule):
 
-    def match(self, *args, **kwargs):
+    @staticmethod
+    def match(*args, **kwargs):
         return inline_regex('^\\[(' + LINK_INSIDE + ')\\]\\(' + LINK_HREF_AND_TITLE + '\\)')(*args, **kwargs)
 
-    def parse(self, capture, parse, state):
+    @staticmethod
+    def parse(capture, parse, state):
         link = {
             'content': parse(capture[1], state),
             'target': unescape_url(capture[2]),
@@ -955,7 +1000,8 @@ class Link(Rule):
         }
         return link
 
-    def react(self, node, output, state):
+    @staticmethod
+    def react(node, output, state):
         return react_element(
             'a',
             state['key'],
@@ -966,7 +1012,8 @@ class Link(Rule):
             }
         )
 
-    def html(self, node, output, state):
+    @staticmethod
+    def html(node, output, state):
         attributes = {
             'href': sanitize_text(node['target']),
             'title': node.get('title')
@@ -977,10 +1024,12 @@ class Link(Rule):
 
 class Image(Rule):
 
-    def match(self, *args, **kwargs):
+    @staticmethod
+    def match(*args, **kwargs):
         return inline_regex('^!\\[(' + LINK_INSIDE + ')\\]\\(' + LINK_HREF_AND_TITLE + '\\)')(*args, **kwargs)
 
-    def parse(self, capture, parse, state):
+    @staticmethod
+    def parse(capture, parse, state):
         image = {
             'alt': capture[1],
             'target': unescape_url(capture[2]),
@@ -989,7 +1038,8 @@ class Image(Rule):
 
         return image
 
-    def react(self, node, output, state):
+    @staticmethod
+    def react(node, output, state):
         return react_element(
             'img',
             state['key'],
@@ -1000,7 +1050,8 @@ class Image(Rule):
             }
         )
 
-    def html(self, node, output, state):
+    @staticmethod
+    def html(node, output, state):
         attributes = {
             'src': sanitize_text(node['target']),
             'alt': node['alt'],
@@ -1012,10 +1063,12 @@ class Image(Rule):
 
 class RefLink(Rule):
 
-    def match(self, *args, **kwargs):
+    @staticmethod
+    def match(*args, **kwargs):
         return inline_regex('^\\[(' + LINK_INSIDE + ')\\]' + '\\s*\\[([^\\]]*)\\]')(*args, **kwargs)
 
-    def parse(self, capture, parse, state):
+    @staticmethod
+    def parse(capture, parse, state):
         return parse_ref(capture, state, {
             'type': 'link',
             'content': parse(capture[1], state)
@@ -1024,10 +1077,12 @@ class RefLink(Rule):
 
 class RefImage(Rule):
 
-    def match(self, *args, **kwargs):
+    @staticmethod
+    def match(*args, **kwargs):
         return inline_regex('^!\\[(' + LINK_INSIDE + ')\\]' + '\\s*\\[([^\\]]*)\\]')(*args, **kwargs)
 
-    def parse(self, capture, parse, state):
+    @staticmethod
+    def parse(capture, parse, state):
         return parse_ref(capture, state, {
             'type': 'image',
             'alt': capture[1]
@@ -1036,21 +1091,25 @@ class RefImage(Rule):
 
 class Em(Rule):
 
-    def match(self, *args, **kwargs):
+    @staticmethod
+    def match(*args, **kwargs):
         return inline_regex(
             '^\\b_((?:__|\\\\[\\s\\S]|[^\\\\_])+?)_\\b|^\\*(?=\\S)((?:\\*\\*|\\\\[\\s\\S]'
             '|\\s+(?:\\\\[\\s\\S]|[^\\s\\*\\\\]|\\*\\*)|[^\\s\\*\\\\])+?)\\*(?!\\*)'
         )(*args, **kwargs)
 
-    def quality(self, capture, *args, **kwargs):
+    @staticmethod
+    def quality(capture, *args, **kwargs):
         return len(capture[0]) + 0.2
 
-    def parse(self, capture, parse, state):
+    @staticmethod
+    def parse(capture, parse, state):
         return {
             'content': parse(capture[2] or capture[1], state)
         }
 
-    def react(self, node, output, state):
+    @staticmethod
+    def react(node, output, state):
         return react_element(
             'em',
             state['key'],
@@ -1059,22 +1118,27 @@ class Em(Rule):
             }
         )
 
-    def html(self, node, output, state):
+    @staticmethod
+    def html(node, output, state):
         return html_tag('em', output(node['content'], state))
 
 
 class Strong(Rule):
 
-    def match(self, *args, **kwargs):
+    @staticmethod
+    def match(*args, **kwargs):
         return inline_regex(r'^\*\*((?:\\[\s\S]|[^\\])+?)\*\*(?!\*)')(*args, **kwargs)
 
-    def quality(self, capture, *args, **kwargs):
+    @staticmethod
+    def quality(capture, *args, **kwargs):
         return len(capture[0]) + 0.1
 
-    def parse(self, capture, parse, state):
+    @staticmethod
+    def parse(capture, parse, state):
         return parse_capture_inline(capture, parse, state)
 
-    def react(self, node, output, state):
+    @staticmethod
+    def react(node, output, state):
         return react_element(
             'strong',
             state['key'],
@@ -1083,22 +1147,27 @@ class Strong(Rule):
             }
         )
 
-    def html(self, node, output, state):
+    @staticmethod
+    def html(node, output, state):
         return html_tag('strong', output(node['content'], state))
 
 
 class U(Rule):
 
-    def match(self, *args, **kwargs):
+    @staticmethod
+    def match(*args, **kwargs):
         return inline_regex(r'^__((?:\\[\s\S]|[^\\])+?)__(?!_)')(*args, **kwargs)
 
-    def quality(self, capture, *args, **kwargs):
+    @staticmethod
+    def quality(capture, *args, **kwargs):
         return len(capture[0])
 
-    def parse(self, capture, parse, state):
+    @staticmethod
+    def parse(capture, parse, state):
         return parse_capture_inline(capture, parse, state)
 
-    def react(self, node, output, state):
+    @staticmethod
+    def react(node, output, state):
         return react_element(
             'u',
             state['key'],
@@ -1107,19 +1176,23 @@ class U(Rule):
             }
         )
 
-    def html(self, node, output, state):
+    @staticmethod
+    def html(node, output, state):
         return html_tag('u', output(node['content'], state))
 
 
 class Del(Rule):
 
-    def match(self, *args, **kwargs):
+    @staticmethod
+    def match(*args, **kwargs):
         return inline_regex(r'^~~(?=\S)((?:\\[\s\S]|~(?!~)|[^\s~]|\s(?!~~))+?)~~')(*args, **kwargs)
 
-    def parse(self, capture, parse, state):
+    @staticmethod
+    def parse(capture, parse, state):
         return parse_capture_inline(capture, parse, state)
 
-    def react(self, node, output, state):
+    @staticmethod
+    def react(node, output, state):
         return react_element(
             'del',
             state['key'],
@@ -1128,21 +1201,25 @@ class Del(Rule):
             }
         )
 
-    def html(self, node, output, state):
+    @staticmethod
+    def html(node, output, state):
         return html_tag('del', output(node['content'], state))
 
 
 class InlineCode(Rule):
 
-    def match(self, *args, **kwargs):
+    @staticmethod
+    def match(*args, **kwargs):
         return inline_regex(r'^(`+)([\s\S]*?[^`])\1(?!`)')(*args, **kwargs)
 
-    def parse(self, capture, parse, state):
+    @staticmethod
+    def parse(capture, parse, state):
         return {
             'content': INLINE_CODE_ESCAPE_BACKTICKS_R.sub(r'\1', capture[2])
         }
 
-    def react(self, node, output, state):
+    @staticmethod
+    def react(node, output, state):
         return react_element(
             'code',
             state['key'],
@@ -1151,53 +1228,62 @@ class InlineCode(Rule):
             }
         )
 
-    def html(self, node, output, state):
+    @staticmethod
+    def html(node, output, state):
         return html_tag('code', sanitize_text(node['content']))
 
 
 class Br(Rule):
 
-    def match(self, *args, **kwargs):
+    @staticmethod
+    def match(*args, **kwargs):
         return any_scope_regex(r'^ {2,}\n')(*args, **kwargs)
 
-    def parse(self, capture, parse, state):
+    @staticmethod
+    def parse(capture, parse, state):
         return ignore_capture()
 
-    def react(self, node, output, state):
+    @staticmethod
+    def react(node, output, state):
         return react_element(
             'br',
             state['key'],
             EMPTY_PROPS
         )
 
-    def html(self, node, output, state):
+    @staticmethod
+    def html(*args, **kwargs):
         return '<br>'
 
 
 class Text(Rule):
 
-    def match(self, *args, **kwargs):
+    @staticmethod
+    def match(*args, **kwargs):
         return any_scope_regex(r'^[\s\S]+?(?=[^0-9A-Za-z\s\u00c0-\uffff]|\n\n| {2,}\n|\w+:\S|$)')(*args, **kwargs)
 
-    def parse(self, capture, parse, state):
+    @staticmethod
+    def parse(capture, parse, state):
         return {
             'content': capture[0]
         }
 
-    def react(self, node, output, state):
+    @staticmethod
+    def react(node, output, state):
         return node['content']
 
-    def html(self, node, output, state):
+    @staticmethod
+    def html(node, output, state):
         return sanitize_text(node['content'])
 
 
 default_rules = {
-    'Array': Array(current_order),
+    'Array': Array(None),
     'heading': Heading((current_order := current_order + 1) - 1),
-    'nptable': NpTable((current_order := current_order + 1) - 1),
-    'lheading': LHeading((current_order := current_order + 1) - 1),
+    'np_table': NpTable((current_order := current_order + 1) - 1),
+    'l_heading': LHeading((current_order := current_order + 1) - 1),
     'hr': HR((current_order := current_order + 1) - 1),
-    'codeBlock': CodeBlock((current_order := current_order + 1) - 1),
+    'code_block': CodeBlock((current_order := current_order + 1) - 1),
     'fence': Fence((current_order := current_order + 1) - 1),
     'blockQuote': BlockQuote((current_order := current_order + 1) - 1),
     'list': List((current_order := current_order + 1) - 1),
@@ -1206,19 +1292,19 @@ default_rules = {
     'newline': NewLine((current_order := current_order + 1) - 1),
     'paragraph': Paragraph((current_order := current_order + 1) - 1),
     'escape': Escape((current_order := current_order + 1) - 1),
-    'tableSeparator': TableSeparator((current_order := current_order + 1) - 1),
+    'table_separator': TableSeparator((current_order := current_order + 1) - 1),
     'autolink': AutoLink((current_order := current_order + 1) - 1),
     'mailto': MailTo((current_order := current_order + 1) - 1),
     'url': URL((current_order := current_order + 1) - 1),
     'link': Link((current_order := current_order + 1) - 1),
     'image': Image((current_order := current_order + 1) - 1),
-    'reflink': RefLink((current_order := current_order + 1) - 1),
-    'refimage': RefImage((current_order := current_order + 1) - 1),
+    'ref_link': RefLink((current_order := current_order + 1) - 1),
+    'ref_image': RefImage((current_order := current_order + 1) - 1),
     'em': Em(current_order),
     'strong': Strong(current_order),
     'u': U((current_order := current_order + 1) - 1),
     'del': Del((current_order := current_order + 1) - 1),
-    'inlineCode': InlineCode((current_order := current_order + 1) - 1),
+    'inline_code': InlineCode((current_order := current_order + 1) - 1),
     'br': Br((current_order := current_order + 1) - 1),
     'text': Text((current_order := current_order + 1) - 1)
 }
