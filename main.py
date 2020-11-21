@@ -85,7 +85,7 @@ def parser_for(rules: dict, default_state: dict = None) -> \
                     current_rule.order == current_order and hasattr(current_rule, 'quality')))
             ):
                 current_order = current_rule.order
-                previous_capture_string = "" if state.get('previous_capture') is None else state['previous_capture'][0]
+                previous_capture_string = '' if state.get('previous_capture') is None else state['previous_capture'][0]
                 current_capture = current_rule.match(source, state, previous_capture_string)
 
                 if current_capture:
@@ -103,6 +103,7 @@ def parser_for(rules: dict, default_state: dict = None) -> \
                     current_rule_type = rule_list[i]
                     current_rule = rules[current_rule_type]
                 except IndexError:
+                    current_rule_type = None
                     current_rule = None
 
             if rule is None or capture is None:
@@ -152,7 +153,7 @@ def inline_regex(regex: str) -> Callable[[str, dict], Union[re.Match, None]]:
 
     def match(source, state, *args, **kwargs):
         if state.get('inline'):
-            return re.match(regex, source)
+            return re.search(regex, source)
         else:
             return None
 
@@ -166,7 +167,7 @@ def block_regex(regex: str) -> Callable[[str, dict], Union[re.Match, None]]:
         if state.get('inline'):
             return None
         else:
-            return re.match(regex, source)
+            return re.search(regex, source)
 
     match.regex = regex
     return match
@@ -175,7 +176,7 @@ def block_regex(regex: str) -> Callable[[str, dict], Union[re.Match, None]]:
 def any_scope_regex(regex: str) -> Callable[[str, dict], re.Match]:
 
     def match(source, state, *args, **kwargs):
-        return re.match(regex, source)
+        return re.search(regex, source)
 
     match.regex = regex
     return match
@@ -219,7 +220,7 @@ def sanitize_url(url: str = None) -> Union[str, None]:
     return url
 
 
-SANITIZE_TEXT_R = re.compile('[<>&"\']')
+SANITIZE_TEXT_R = re.compile(r'[<>&"\']')
 SANITIZE_TEXT_CODES = {
     '<': '&lt;',
     '>': '&gt;',
@@ -227,7 +228,7 @@ SANITIZE_TEXT_CODES = {
     '"': '&quot;',
     "'": '&#x27;',
     '/': '&#x2F;',
-    "`": '&#96;'
+    '`': '&#96;'
 }
 
 
@@ -268,26 +269,26 @@ def ignore_capture() -> dict:
     return {}
 
 
-LIST_BULLET = "(?:[*+-]|\d+\.)"
-LIST_ITEM_PREFIX = "( *)(" + LIST_BULLET + ") +"
-LIST_ITEM_PREFIX_R = re.compile("^" + LIST_ITEM_PREFIX)
+LIST_BULLET = '(?:[*+-]|\\d+\\.)'
+LIST_ITEM_PREFIX = '( *)(' + LIST_BULLET + ') +'
+LIST_ITEM_PREFIX_R = re.compile('^' + LIST_ITEM_PREFIX)
 LIST_ITEM_R = re.compile(
     LIST_ITEM_PREFIX +
-    "[^\\n]*(?:\\n" +
-    "(?!\\1" + LIST_BULLET + " )[^\\n]*)*(\n|$)",
-    re.MULTILINE
+    '[^\\n]*(?:\\n' +
+    '(?!\\1' + LIST_BULLET + ' )[^\\n]*)*(\n|$)',
+    flags=re.MULTILINE
 )
 BLOCK_END_R = re.compile(r'\n{2,}$')
 INLINE_CODE_ESCAPE_BACKTICKS_R = re.compile(r'^ (?= *`)|(` *) $')
 LIST_BLOCK_END_R = BLOCK_END_R
 LIST_ITEM_END_R = re.compile(r' *\n+$')
 LIST_R = re.compile(
-    "^( *)(" + LIST_BULLET + ") " +
-    "[\\s\\S]+?(?:\n{2,}(?! )" +
-    "(?!\\1" + LIST_BULLET + " )\n*" +
-    "|\\s*\n*$)"
+    '^( *)(' + LIST_BULLET + ') ' +
+    '[\\s\\S]+?(?:\n{2,}(?! )' +
+    '(?!\\1' + LIST_BULLET + ' )\n*' +
+    '|\\s*\n*$)'
 )
-LIST_LOOKBEHIND_R = re.compile(r'(?:^|\n)( *)$')
+LIST_LOOKBEHIND_R = re.compile(r'(?:^|\n)( *)\Z')
 
 
 def do_tables() -> dict:
@@ -334,7 +335,7 @@ def do_tables() -> dict:
         return cells
 
     def parse_table_cells(source, parse, state, trim_end_separators):
-        rows_text = source.strip().split("\n")
+        rows_text = source.strip().split('\n')
 
         return list(map(lambda row_text: parse_table_row(row_text, parse, state, trim_end_separators), rows_text))
 
@@ -348,7 +349,7 @@ def do_tables() -> dict:
             state['inline'] = False
 
             return {
-                'type': "table",
+                'type': 'table',
                 'header': header,
                 'align': align,
                 'cells': cells
@@ -364,9 +365,9 @@ def do_tables() -> dict:
     }
 
 
-LINK_INSIDE = "(?:\\[[^\\]]*\\]|[^\\[\\]]|\\](?=[^\\[]*\\]))*"
-LINK_HREF_AND_TITLE = "\\s*<?((?:\\([^)]*\\)|[^\\s\\\\]|\\\\.)*?)>?(?:\\s+['\"]([\\s\\S]*?)['\"])?\\s*"
-AUTOLINK_MAILTO_CHECK_R = re.compile('mailto:', re.IGNORECASE)
+LINK_INSIDE = '(?:\\[[^\\]]*\\]|[^\\[\\]]|\\](?=[^\\[]*\\]))*'
+LINK_HREF_AND_TITLE = '\\s*<?((?:\\([^)]*\\)|[^\\s\\\\]|\\\\.)*?)>?(?:\\s+[\'"]([\\s\\S]*?)[\'"])?\\s*'
+AUTOLINK_MAILTO_CHECK_R = re.compile('mailto:', flags=re.IGNORECASE)
 
 
 def parse_ref(capture, state, ref_node):
@@ -592,12 +593,12 @@ class List(Rule):
 
     def match(self, source, state, *args, **kwargs):
         previous_capture_string = '' if state.get('previous_capture') is None else state['previous_capture'][0]
-        is_start_of_line_capture = LIST_LOOKBEHIND_R.match(previous_capture_string)
+        is_start_of_line_capture = LIST_LOOKBEHIND_R.search(previous_capture_string)
         is_list_block = state.get('_list') or not state.get('inline')
 
         if is_start_of_line_capture and is_list_block:
             source = is_start_of_line_capture[1] + source
-            a = LIST_R.match(source)
+            a = LIST_R.search(source)
             return a
         else:
             return None
@@ -612,10 +613,10 @@ class List(Rule):
 
         def content_map(i, item):
             item = item[0]
-            prefix_capture = LIST_ITEM_PREFIX_R.match(item)
+            prefix_capture = LIST_ITEM_PREFIX_R.search(item)
             space = len(prefix_capture[0]) if prefix_capture else 0
             space_regex = r'^ {1,' + str(space) + '}'
-            content = LIST_ITEM_PREFIX_R.sub('', re.sub(space_regex, '', item, re.MULTILINE), count=1)
+            content = LIST_ITEM_PREFIX_R.sub('', re.sub(space_regex, '', item, flags=re.MULTILINE), count=1)
 
             is_last_item = i == len(list(items)) - 1
             contains_blocks = '\n\n' in content
@@ -872,7 +873,7 @@ class TableSeparator(Rule):
         if not state.get('in_table'):
             return
 
-        return re.match(r'^ *\| *', source)
+        return re.search(r'^ *\| *', source)
 
     def parse(self, *args, **kwargs):
         return {
@@ -911,7 +912,7 @@ class MailTo(Rule):
         address = capture[1]
         target = capture[1]
 
-        if not AUTOLINK_MAILTO_CHECK_R.match(target):
+        if not AUTOLINK_MAILTO_CHECK_R.search(target):
             target = f'mailto:{target}'
 
         return {
@@ -1037,8 +1038,8 @@ class Em(Rule):
 
     def match(self, *args, **kwargs):
         return inline_regex(
-            "^\\b_((?:__|\\\\[\\s\\S]|[^\\\\_])+?)_\\b|^\\*(?=\\S)((?:\\*\\*|\\\\[\\s\\S]"
-            "|\\s+(?:\\\\[\\s\\S]|[^\\s\\*\\\\]|\\*\\*)|[^\\s\\*\\\\])+?)\\*(?!\\*)"
+            '^\\b_((?:__|\\\\[\\s\\S]|[^\\\\_])+?)_\\b|^\\*(?=\\S)((?:\\*\\*|\\\\[\\s\\S]'
+            '|\\s+(?:\\\\[\\s\\S]|[^\\s\\*\\\\]|\\*\\*)|[^\\s\\*\\\\])+?)\\*(?!\\*)'
         )(*args, **kwargs)
 
     def quality(self, capture, *args, **kwargs):
@@ -1274,11 +1275,11 @@ def output_for(rules: dict, property_: str, default_state: dict = None):
     latest_state = None
     array_rule = rules.get('Array') or default_rules['Array']
 
-    array_rule_check = getattr(array_rule, property)
+    array_rule_check = getattr(array_rule, property_)
     if not array_rule_check:
         raise Exception(
             'simple-markdown: outputFor: to join nodes of type `' +
-            property + '` you must provide an `Array:` joiner rule with that type, ' +
+            property_ + '` you must provide an `Array:` joiner rule with that type, ' +
             'Please see the docs for details on specifying an Array rule.'
         )
     array_rule_output = array_rule_check
