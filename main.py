@@ -1,5 +1,5 @@
 import re
-from typing import Union, Callable, Iterable, Optional
+from typing import Union, Callable, Optional, List as List_
 from urllib.parse import unquote
 
 from functools import cmp_to_key
@@ -148,7 +148,7 @@ def parser_for(rules: dict, default_state: dict = None) -> \
     return outer_parse
 
 
-def inline_regex(regex: str) -> Callable[[str, dict], Union[Iterable, None]]:
+def inline_regex(regex: str) -> Callable[[str, dict], Union[re.Match, None]]:
 
     def match(source, state, *args, **kwargs):
         if state.get('inline'):
@@ -160,7 +160,7 @@ def inline_regex(regex: str) -> Callable[[str, dict], Union[Iterable, None]]:
     return match
 
 
-def block_regex(regex: str) -> Callable[[str, dict], Union[Iterable, None]]:
+def block_regex(regex: str) -> Callable[[str, dict], Union[re.Match, None]]:
 
     def match(source, state, *args, **kwargs):
         if state.get('inline'):
@@ -172,7 +172,7 @@ def block_regex(regex: str) -> Callable[[str, dict], Union[Iterable, None]]:
     return match
 
 
-def any_scope_regex(regex: str) -> Callable[[str, dict], Iterable]:
+def any_scope_regex(regex: str) -> Callable[[str, dict], re.Match]:
 
     def match(source, state, *args, **kwargs):
         return re.match(regex, source)
@@ -231,18 +231,18 @@ SANITIZE_TEXT_CODES = {
 }
 
 
-def sanitize_text(text):
+def sanitize_text(text: str) -> str:
     return SANITIZE_TEXT_R.sub(lambda m: SANITIZE_TEXT_CODES[m.group()], str(text))
 
 
 UNESCAPE_URL_R = re.compile(r'\\([^0-9A-Za-z\s])')
 
 
-def unescape_url(raw_url_string: str):
+def unescape_url(raw_url_string: str) -> str:
     return UNESCAPE_URL_R.sub(lambda m: m.group(1), raw_url_string)
 
 
-def parse_inline(parse, content: str, state: dict):
+def parse_inline(parse, content: str, state: dict) -> list:
     is_currently_inline = state.get('inline', False)
     state['inline'] = True
     result = parse(content, state)
@@ -250,7 +250,7 @@ def parse_inline(parse, content: str, state: dict):
     return result
 
 
-def parse_block(parse, content, state):
+def parse_block(parse, content: str, state: dict) -> list:
     is_currently_inline = state.get('inline', False)
     state['inline'] = False
     result = parse(content + '\n\n', state)
@@ -258,13 +258,13 @@ def parse_block(parse, content, state):
     return result
 
 
-def parse_capture_inline(capture, parse, state):
+def parse_capture_inline(capture, parse, state) -> dict:
     return {
         'content': parse_inline(parse, capture[1], state)
     }
 
 
-def ignore_capture():
+def ignore_capture() -> dict:
     return {}
 
 
@@ -1223,12 +1223,9 @@ default_rules = {
 }
 
 
-def rules_output(rules, property):
-    if not property:
-        print('simple-markdown ruleOutput should take \'react\' or \'html\' as the second argument.')
-
+def rules_output(rules: dict, property_: str):
     def nested_rules_output(ast, output_func, state):
-        return getattr(rules[ast['type']], property)(ast, output_func, state)
+        return getattr(rules[ast['type']], property_)(ast, output_func, state)
 
     return nested_rules_output
 
