@@ -1309,6 +1309,8 @@ default_rules = {
     'text': Text((current_order := current_order + 1) - 1)
 }
 
+default_classes = {key: item.__class__ for key, item in default_rules.items()}
+
 
 def rules_output(rules: dict, property_: str):
     def nested_rules_output(ast, output_func, state):
