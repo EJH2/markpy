@@ -149,11 +149,11 @@ def parser_for(rules: dict, default_state: dict = None) -> \
     return outer_parse
 
 
-def inline_regex(regex: str) -> Callable[[str, dict], Union[re.Match, None]]:
+def inline_regex(regex: str, flags: int = 0) -> Callable[[str, dict], Union[re.Match, None]]:
 
     def match(source, state, *args, **kwargs):
         if state.get('inline'):
-            return re.search(regex, source)
+            return re.search(regex, source, flags=flags)
         else:
             return None
 
@@ -161,22 +161,22 @@ def inline_regex(regex: str) -> Callable[[str, dict], Union[re.Match, None]]:
     return match
 
 
-def block_regex(regex: str) -> Callable[[str, dict], Union[re.Match, None]]:
+def block_regex(regex: str, flags: int = 0) -> Callable[[str, dict], Union[re.Match, None]]:
 
     def match(source, state, *args, **kwargs):
         if state.get('inline'):
             return None
         else:
-            return re.search(regex, source)
+            return re.search(regex, source, flags=flags)
 
     match.regex = regex
     return match
 
 
-def any_scope_regex(regex: str) -> Callable[[str, dict], re.Match]:
+def any_scope_regex(regex: str, flags: int = 0) -> Callable[[str, dict], re.Match]:
 
     def match(source, state, *args, **kwargs):
-        return re.search(regex, source)
+        return re.search(regex, source, flags=flags)
 
     match.regex = regex
     return match
