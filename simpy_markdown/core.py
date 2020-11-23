@@ -200,7 +200,11 @@ def html_tag(tag_name: str, content: str, attributes: dict = {}, is_closed: bool
         if attribute := attributes[attr]:
             attribute_string += f' {sanitize_text(attr)}="{sanitize_text(attribute)}"'
 
-    unclosed_tag = f'<{tag_name}{attribute_string}>'
+    attr_string = ' '.join(
+        f'{sanitize_text(attr)}="{sanitize_text(attributes[attr])}"' for attr in attributes if attributes[attr]
+    )
+
+    unclosed_tag = f'<{tag_name}{" " + attr_string if attr_string else ""}>'
     if is_closed:
         return unclosed_tag + content + f'</{tag_name}>'
     else:
