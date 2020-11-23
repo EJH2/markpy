@@ -194,11 +194,8 @@ def react_element(_type: str, key: Union[str, int] = None, props: dict = None) -
     return element
 
 
-def html_tag(tag_name: str, content: str, attributes: dict = {}, is_closed: bool = True) -> str:
-    attribute_string = ''
-    for attr in attributes:
-        if attribute := attributes[attr]:
-            attribute_string += f' {sanitize_text(attr)}="{sanitize_text(attribute)}"'
+def html_tag(tag_name: str, content: str, attributes: dict = None, is_closed: bool = True) -> str:
+    attributes = attributes or {}
 
     attr_string = ' '.join(
         f'{sanitize_text(attr)}="{sanitize_text(attributes[attr])}"' for attr in attributes if attributes[attr]
