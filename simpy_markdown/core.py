@@ -1312,11 +1312,11 @@ default_rules = {
 default_classes = {key: item.__class__ for key, item in default_rules.items()}
 
 
-def rules_output(rules: dict, property_: str):
-    def nested_rules_output(ast, output_func, state):
+def rule_output(rules: dict, property_: str):
+    def nested_rule_output(ast, output_func, state):
         return getattr(rules[ast['type']], property_)(ast, output_func, state)
 
-    return nested_rules_output
+    return nested_rule_output
 
 
 def react_for(output_func):
