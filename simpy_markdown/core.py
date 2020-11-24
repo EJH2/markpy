@@ -125,7 +125,7 @@ def parser_for(rules: dict, default_state: dict = None) -> \
             parsed = rule.parse(capture, nested_parse, state)
 
             if isinstance(parsed, list):
-                result.append(parsed)
+                result.extend(parsed)
             else:
                 if parsed.get('type') is None:
                     parsed['type'] = rule_type
