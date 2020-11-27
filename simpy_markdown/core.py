@@ -37,7 +37,7 @@ def parser_for(rules: dict, default_state: dict = None) -> \
             print(f'Invalid order for rule `{rule_type}`: {order}')
         return True
 
-    rule_list = list(filter(_filter_rules, rules.keys()))
+    rule_list = [rule for rule in rules.keys() if _filter_rules(rule)]
 
     def _sort_rules(rule_type_a, rule_type_b):
         rule_a = rules[rule_type_a]
@@ -313,7 +313,7 @@ def do_tables() -> dict:
         if trim_end_separators:
             source = table_row_separator_trim.sub('', source)
         align_text = source.strip().split('|')
-        return list(map(parse_table_align_capture, align_text))
+        return [parse_table_align_capture(capture) for capture in align_text]
 
     def parse_table_row(source, parse, state, trim_end_separators):
         prev_in_table = state.get('in_table')
@@ -338,7 +338,7 @@ def do_tables() -> dict:
     def parse_table_cells(source, parse, state, trim_end_separators):
         rows_text = source.strip().split('\n')
 
-        return list(map(lambda row_text: parse_table_row(row_text, parse, state, trim_end_separators), rows_text))
+        return [parse_table_row(row_text, parse, state, trim_end_separators) for row_text in rows_text]
 
     def parse_table(trim_end_separators):
 
@@ -657,7 +657,7 @@ class List(Rule):
             state['_list'] = old_state_list
             return result
 
-        item_content = list(map(lambda enum: content_map(enum[0], enum[1]), enumerate(items)))
+        item_content = [content_map(index, item) for index, item in enumerate(items)]
 
         return {
             'ordered': ordered,
