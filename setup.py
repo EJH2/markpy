@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="simpy_markdown",
-    version="0.0.1",
+    version="0.0.2",
     author="EJH2",
     description="simple-markdown, but Python",
     long_description=long_description,
