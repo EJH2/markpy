@@ -674,13 +674,13 @@ class List(Rule):
             state['key'],
             {
                 'start': node['start'],
-                'children': list(map(lambda index, item: react_element(
+                'children': [react_element(
                     'li',
                     str(index),
                     {
                         'children': output(item, state)
                     }
-                ), node['items']))
+                ) for index, item in enumerate(node['items'])]
             }
         )
 
