@@ -1016,7 +1016,7 @@ class Link(Rule):
     @staticmethod
     def html(node, output, state):
         attributes = {
-            'href': sanitize_text(node['target']),
+            'href': sanitize_text(node.get('target')),
             'title': node.get('title')
         }
 
