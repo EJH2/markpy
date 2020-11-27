@@ -622,18 +622,18 @@ class List(Rule):
         bullet = capture[2]
         ordered = len(bullet) > 1
         start = int(re.sub(r'[^\d]+?', '', bullet)) if ordered else None
-        items = list(LIST_ITEM_R.finditer(LIST_BLOCK_END_R.sub('\n', capture[0], count=1)))
+        items = [item[0] for item in LIST_ITEM_R.finditer(LIST_BLOCK_END_R.sub('\n', capture[0], count=1))]
+        items_length = len(items)
 
         last_item_was_a_paragraph = False
 
         def content_map(i, item):
-            item = item[0]
             prefix_capture = LIST_ITEM_PREFIX_R.search(item)
             space = len(prefix_capture[0]) if prefix_capture else 0
             space_regex = r'^ {1,' + str(space) + '}'
             content = LIST_ITEM_PREFIX_R.sub('', re.sub(space_regex, '', item, flags=re.MULTILINE), count=1)
 
-            is_last_item = i == len(list(items)) - 1
+            is_last_item = i == items_length - 1
             contains_blocks = '\n\n' in content
 
             nonlocal last_item_was_a_paragraph
