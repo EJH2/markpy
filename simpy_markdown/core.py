@@ -1186,7 +1186,7 @@ class Del(Rule):
 
     @staticmethod
     def match(*args, **kwargs):
-        return inline_regex(r'^~~(?=\S)((?:\\[\s\S]|~(?!~)|[^\s~]|\s(?!~~))+?)~~')(*args, **kwargs)
+        return inline_regex(r'^~~(?=\S)((?:\\[\s\S]|~(?!~)|[^\s~\\]|\s(?!~~))+?)~~')(*args, **kwargs)
 
     @staticmethod
     def parse(capture, parse, state):
